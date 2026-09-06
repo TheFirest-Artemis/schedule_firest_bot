@@ -170,6 +170,9 @@ def _parse_cell_text(text: str) -> Optional[dict]:
     is_online = bool(ONLINE_MARK_RE.match(teacher))
     if is_online:
         teacher = ""
+    elif any(ONLINE_MARK_RE.match(ln) for ln in lines[2:]):
+        # "Онлайн" отдельной строкой после имени преподавателя (а не вместо него).
+        is_online = True
     rest = "\n".join(lines[2:])
     room_match = ROOM_RE.search(rest)
     url_match = URL_RE.search(rest)

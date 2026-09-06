@@ -1,7 +1,7 @@
 import re
 
 from aiogram import F, Router
-from aiogram.filters import CommandStart
+from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import Message
 
@@ -31,6 +31,14 @@ async def process_password(message: Message, state: FSMContext):
         return
 
     await set_authenticated(state)
+    await _greet(message, state)
+
+
+@router.message(Command("menu"))
+async def cmd_menu(message: Message, state: FSMContext):
+    if not await is_authenticated(state):
+        await message.answer("Сначала введите пароль: отправьте /start.")
+        return
     await _greet(message, state)
 
 

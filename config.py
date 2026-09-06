@@ -27,6 +27,9 @@ SCHEDULE_DAYS_MAX = 14
 
 DEFAULT_GROUP = "2615-2"
 
+# URL мини-приложения (GitHub Pages). Если не задан — кнопка меню с мини-аппом не показывается.
+MINI_APP_URL = os.getenv("MINI_APP_URL", "https://thefirest-artemis.github.io/schedule_firest_bot/")
+
 if not BOT_TOKEN:
     raise RuntimeError("BOT_TOKEN не задан. Заполните файл .env (см. .env.example).")
 if not SPREADSHEET_ID:
