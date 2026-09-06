@@ -6,7 +6,6 @@ const CONFIG = {
   // Ключ read-only, ограничен только Google Sheets API — таблица открыта на просмотр всем.
   GOOGLE_API_KEY: "AIzaSyAAjCdh31z0AZMQk-fkH4K_iv2di6lePEU",
   DAYS: 7, // мини-апп всегда открывается на неделю вперёд
-  CACHE_TTL_MS: 5 * 60 * 1000,
 };
 
 const FIELDS_MASK =
@@ -471,7 +470,7 @@ document.getElementById("groupSaveBtn").addEventListener("click", () => {
 });
 
 // ---------------------------------------------------------------------------
-// Загрузка с кэшем (не чаще раза в 5 минут)
+// Загрузка (кэш — для мгновенного первого показа, сеть — всегда при обновлении)
 // ---------------------------------------------------------------------------
 
 function readCache() {
@@ -487,17 +486,10 @@ function writeCache(tabs) {
   localStorage.setItem("scheduleCache", JSON.stringify({ tabs, fetchedAt: Date.now() }));
 }
 
-function humanizeAgo(fetchedAt) {
-  const seconds = Math.floor((Date.now() - fetchedAt) / 1000);
-  if (seconds < 60) return "только что";
-  const minutes = Math.floor(seconds / 60);
-  if (minutes === 1) return "1 минуту назад";
-  if (minutes >= 2 && minutes <= 4) return `${minutes} минуты назад`;
-  return `${minutes} минут назад`;
-}
-
 let currentTabs = null;
 let currentFetchedAt = 0;
+let currentSchedule = null;
+let currentGroup = null;
 
 function renderFromTabs(tabs) {
   const group = getGroup();
@@ -508,6 +500,8 @@ function renderFromTabs(tabs) {
     renderStatus(`Группа «${group}» не найдена в таблице. Проверьте номер.`);
     return;
   }
+  currentSchedule = schedule;
+  currentGroup = group;
   renderSchedule(schedule, group);
 }
 
@@ -519,24 +513,14 @@ async function loadAndRender(forceNetwork) {
   }
 
   const cache = readCache();
-  const cacheAge = cache ? Date.now() - cache.fetchedAt : Infinity;
-  const isFresh = cacheAge < CONFIG.CACHE_TTL_MS;
 
-  if (cache && (isFresh || !forceNetwork)) {
+  if (cache && !forceNetwork) {
     currentTabs = cache.tabs;
     currentFetchedAt = cache.fetchedAt;
     renderFromTabs(currentTabs);
   }
 
   if (!cache) renderStatus("Загрузка расписания…");
-
-  if (cache && isFresh && forceNetwork) {
-    // Explicit refresh, но кэш ещё свежий — не дёргаем API лишний раз.
-    const leftMs = CONFIG.CACHE_TTL_MS - cacheAge;
-    const leftMin = Math.max(1, Math.ceil(leftMs / 60000));
-    flashNote(`Обновление не чаще раза в 5 минут. Ещё ${leftMin} мин.`);
-    return;
-  }
 
   try {
     const tabs = await fetchTabs();
@@ -567,6 +551,50 @@ document.getElementById("refreshBtn").addEventListener("click", (e) => {
   void e.currentTarget.offsetWidth;
   e.currentTarget.classList.add("spin");
   loadAndRender(true);
+});
+
+// ---------------------------------------------------------------------------
+// Экспорт в картинку (сохраняет текущую тему как есть)
+// ---------------------------------------------------------------------------
+
+async function exportImage() {
+  if (!currentSchedule) return;
+
+  const root = document.getElementById("captureRoot");
+  document.body.classList.add("capturing");
+  try {
+    const canvas = await html2canvas(root, {
+      backgroundColor: null,
+      scale: Math.max(2, window.devicePixelRatio || 1),
+    });
+
+    const first = currentSchedule[0].date;
+    const mm = String(first.getMonth() + 1).padStart(2, "0");
+    const dd = String(first.getDate()).padStart(2, "0");
+    const filename = `schedule_${currentGroup}_${mm}-${dd}_${currentSchedule.length}.png`;
+
+    canvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 5000);
+    }, "image/png");
+  } catch (e) {
+    flashNote("Не удалось сохранить картинку.");
+  } finally {
+    document.body.classList.remove("capturing");
+  }
+}
+
+document.getElementById("exportBtn").addEventListener("click", (e) => {
+  e.currentTarget.classList.remove("spin");
+  void e.currentTarget.offsetWidth;
+  e.currentTarget.classList.add("spin");
+  exportImage();
 });
 
 // ---------------------------------------------------------------------------
