@@ -116,17 +116,27 @@ body.capturing .no-capture {
 
 .banner-sub-row {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   gap: 8px;
   margin-top: 2px;
 }
 
+.banner-sub-row .banner-sub {
+  margin-top: 0;
+}
+
 .link-btn {
+  appearance: none;
+  -webkit-appearance: none;
   background: none;
   border: none;
+  margin: 0;
   color: var(--banner-sub-text);
-  text-decoration: underline;
+  font-family: inherit;
   font-size: 13px;
+  line-height: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
   padding: 0;
   cursor: pointer;
 }
